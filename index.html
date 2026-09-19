@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>語文神射手：雙人白板對戰大挑戰</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    
+    body {
+      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background: #111e2e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-container {
+      width: 1024px;
+      height: 720px;
+      border: 8px solid #ff9f43;
+      border-radius: 24px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      overflow: hidden;
+      background: #70a1ff;
+    }
+
+    /* 頂部資訊欄（卡通畫風） */
+    #status-bar {
+      height: 75px;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 30px;
+      z-index: 10;
+      border-bottom: 4px solid rgba(255,255,255,0.2);
+    }
+    
+    .score-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 6px 20px;
+      border-radius: 50px;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    
+    .p1-card { background: #ff4757; }
+    .p2-card { background: #1e90ff; }
+    
+    .score-title { font-size: 20px; font-weight: bold; }
+    .score-num { font-size: 36px; font-weight: 900; font-family: 'Fredoka One', cursive; }
+    
+    #timer-box {
+      font-size: 26px;
+      font-weight: bold;
+      background: #ffb142;
+      color: #222;
+      padding: 6px 20px;
+      border-radius: 30px;
+      border: 3px solid #fff;
+    }
+
+    /* 卡通遊戲背景：藍天白雲草地 */
+    #game-area {
+      flex: 1;
+      position: relative;
+      background: linear-gradient(to bottom, #48dbfb 0%, #0abde3 60%, #10ac84 60%, #1dd1a1 100%);
+      overflow: hidden;
+    }
+
+    /* 卡通太陽與雲朵 */
+    .sun {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background: #feca57;
+      border-radius: 50%;
+      box-shadow: 0 0 40px #ff9f43;
+      border: 4px solid #fff;
+    }
+
+    .cloud {
+      position: absolute;
+      background: #fff;
+      border-radius: 50px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+    .cloud1 { width: 140px; height: 45px; top: 40px; left: 100px; }
+    .cloud1::before { width: 60px; height: 60px; top: -25px; left: 20px; }
+    .cloud1::after { width: 45px; height: 45px; top: -15px; left: 65px; }
+
+    .cloud2 { width: 160px; height: 50px; top: 60px; right: 120px; }
+    .cloud2::before { width: 70px; height: 70px; top: -30px; left: 25px; }
+    .cloud2::after { width: 50px; height: 50px; top: -20px; left: 85px; }
+
+    /* 草地丘陵裝飾 */
+    .hill {
+      position: absolute;
+      bottom: -40px;
+      width: 600px;
+      height: 120px;
+      background: #10ac84;
+      border-radius: 50%;
+    }
+    .hill-left { left: -100px; }
+    .hill-right { right: -100px; }
+
+    /* 卡通氣球樣式 */
+    .balloon {
+      position: absolute;
+      width: 90px;
+      height: 110px;
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #222;
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: inset -12px -12px 15px rgba(0,0,0,0.15), 0 8px 15px rgba(0,0,0,0.15);
+      border: 3px solid rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 6px;
+      z-index: 3;
+    }
+    /* 氣球高光點 */
+    .balloon::before {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 15px;
+      width: 15px;
+      height: 25px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      transform: rotate(-30deg);
+    }
+    /* 氣球繩子 */
+    .balloon::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      width: 2px;
+      height: 15px;
+      background: rgba(255,255,255,0.8);
+      transform: translateX(-50%);
+    }
+
+    /* 氣球爆破碎片特效 */
+    .pop-particle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 5;
+      animation: popFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes popFade {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+    }
+
+    /* 電子白板觸控按鈕 UI（左右兩側控制面板） */
+    .touch-panel {
+      position: absolute;
+      bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
+    }
+    .panel-p1 { left: 15px; }
+    .panel-p2 { right: 15px; }
+
+    .control-btn {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      font-size: 30px;
+      font-weight: bold;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 10px 15px rgba(0,0,0,0.2);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.05s, box-shadow 0.05s;
+    }
+    .control-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+    }
+
+    /* P1 按鈕配色 */
+    .btn-p1 { background: #ff4757; }
+    .btn-p1-fire { background: #ff6b81; width: 85px; height: 85px; font-size: 22px; border-radius: 25px; }
+    
+    /* P2 按鈕配色 */
+    .btn-p2 { background: #1e90ff; }
+    .btn-p2-fire { background: #70a1ff; width: 85px; height: 85px; font-size: 22px; border-radius: 25px; }
+
+    /* 弓箭系統 */
+    .bow-container {
+      position: absolute;
+      bottom: 40px;
+      width: 80px;
+      height: 80px;
+      pointer-events: none;
+      z-index: 6;
+      transform-origin: center center;
+    }
+    #bow-p1 { left: 110px; }
+    #bow-p2 { right: 110px; }
+
+    .bow-body-p1 {
+      width: 100%; height: 100%;
+      border: 8px solid #ff4757;
+      border-color: #ff4757 transparent transparent transparent;
+      border-radius: 50%/40px 40px 0 0;
+    }
+    .bow-body-p2 {
+      width: 100%; height: 100%;
+      border: 8px solid #1e90ff;
+      border-color: #1e90ff transparent transparent transparent;
+      border-radius: 50%/40px 40px 0 0;
+    }
+    .bow-string {
+      position: absolute; top: 20px; left: 4px; width: 72px; height: 3px; background: #fff;
+    }
+
+    /* 飛行的箭矢 */
+    .arrow {
+      position: absolute;
+      width: 8px;
+      height: 45px;
+      pointer-events: none;
+      z-index: 4;
+      border-radius: 4px;
+    }
+    .arrow-p1 { background: #ff6b81; border-top: 10px solid #ff4757; }
+    .arrow-p2 { background: #70a1ff; border-top: 10px solid #1e90ff; }
+
+    /* 底部題目欄（大字體高清晰度） */
+    #question-bar {
+      height: 105px;
+      background: #2c3e50;
+      border-top: 5px solid #ff9f43;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px 30px;
+      font-size: 26px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 10;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+    }
+    .blank {
+      display: inline-block;
+      width: 150px;
+      border-bottom: 4px solid #feca57;
+      color: #feca57;
+      font-weight: bold;
+      margin: 0 8px;
+    }
+
+    /* 彈窗遮罩 */
+    .modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(16, 27, 41, 0.9);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal h1 { font-size: 44px; color: #feca57; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    
+    .modal-cards {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+    .player-instruction-card {
+      background: rgba(255,255,255,0.1);
+      border: 4px solid #fff;
+      padding: 20px 30px;
+      border-radius: 20px;
+      text-align: center;
+    }
+    .player-instruction-card h3 { font-size: 26px; margin-bottom: 10px; }
+    .player-instruction-card p { font-size: 20px; line-height: 1.6; }
+
+    .btn-start {
+      padding: 15px 50px;
+      font-size: 28px;
+      background: #1dd1a1;
+      color: white;
+      border: 4px solid #fff;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 8px 0 #10ac84, 0 10px 20px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+    .btn-start:active { transform: translateY(4px); box-shadow: 0 4px 0 #10ac84; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <!-- 狀態欄 -->
+  <div id="status-bar">
+    <div class="score-card p1-card">
+      <span class="score-title">🔴 紅隊 (左)</span>
+      <span id="score-p1" class="score-num">0</span>
+    </div>
+    <div id="timer-box">⏱️ <span id="timer">05:00</span></div>
+    <div class="score-card p2-card">
+      <span class="score-title">🔵 藍隊 (右)</span>
+      <span id="score-p2" class="score-num">0</span>
+    </div>
+  </div>
+
+  <!-- 遊戲主要區域（卡通藍天草地） -->
+  <div id="game-area">
+    <div class="sun"></div>
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="hill hill-left"></div>
+    <div class="hill hill-right"></div>
+    
+    <!-- P1 觸控控制面板 (左邊電子白板用) -->
+    <div class="touch-panel panel-p1">
+      <div class="control-btn btn-p1" id="btn-p1-up">▲</div>
+      <div class="control-btn btn-p1 btn-p1-fire" id="btn-p1-fire">🎯<br>發射</div>
+      <div class="control-btn btn-p1" id="btn-p1-down">▼</div>
+    </div>
+
+    <!-- P1 弓箭 -->
+    <div id="bow-p1" class="bow-container">
+      <div class="bow-body-p1"></div>
+      <div class="bow-string"></div>
+    </div>
+
+    <!-- P2 觸控控制面板 (右邊電子白板用) -->
+    <div class="touch-panel panel-p2">
+      <div class="control-btn btn-p2" id="btn-p2-up">▲</div>
+      <div class="control-btn btn-p2 btn-p2-fire" id="btn-p2-fire">🎯<br>發射</div>
+      <div class="control-btn btn-p2" id="btn-p2-down">▼</div>
+    </div>
+
+    <!-- P2 弓箭 -->
+    <div id="bow-p2" class="bow-container">
+      <div class="bow-body-p2"></div>
+      <div class="bow-string"></div>
+    </div>
+  </div>
+
+  <!-- 題目欄 -->
+  <div id="question-bar">
+    <div id="question-text">載入中...</div>
+  </div>
+
+  <!-- 開始對戰彈窗 -->
+  <div id="start-modal" class="modal">
+    <h1>🏹 語文神射手：白板雙人大挑戰</h1>
+    <div class="modal-cards">
+      <div class="player-instruction-card" style="border-color: #ff4757;">
+        <h3 style="color: #ff4757;">🔴 紅隊 (左側玩家)</h3>
+        <p>點擊左側 <b>▲ / ▼</b> 調整方向<br>按大按鈕 <b>🎯 發射</b> 箭矢</p>
+      </div>
+      <div class="player-instruction-card" style="border-color: #1e90ff;">
+        <h3 style="color: #1e90ff;">🔵 藍隊 (右側玩家)</h3>
+        <p>點擊右側 <b>▲ / ▼</b> 調整方向<br>按大按鈕 <b>🎯 發射</b> 箭矢</p>
+      </div>
+    </div>
+    <p style="font-size:22px; margin-bottom:25px;">🎯 率先射中正確答案氣球搶分，<b>先獲得 7 分者勝出！</b></p>
+    <button class="btn-start" onclick="startGame()">開始對戰</button>
+  </div>
+
+  <!-- 結束對戰彈窗 -->
+  <div id="end-modal" class="modal hidden">
+    <h1 id="end-title">對戰結束</h1>
+    <p id="end-message" style="font-size:28px; margin-bottom:30px; text-align:center;"></p>
+    <button class="btn-start" onclick="startGame()">再戰一局</button>
+  </div>
+</div>
+
+<script>
+  const wordData = [
+    { word: "滂沱大雨", text: "天空突然下起___________，路上的行人紛紛拿起雨傘避雨。" },
+    { word: "迷濛", text: "晨霧中的山林一片___________，讓人看不清前面的路徑。" },
+    { word: "衝動", text: "做事情前要三思而行，切忌一時___________而做出錯誤的決定。" },
+    { word: "冒失", text: "他這個人做事總是冒冒失失的，剛才又___________地撞倒了老師的茶杯。" },
+    { word: "橫衝直撞", text: "弟弟在擁擠的超市裡___________，差點撞倒了路旁的老太太。" },
+    { word: "氣沖沖", text: "聽到自己的心愛玩具被弄壞了，他___________地找弟弟理論。" },
+    { word: "指手畫腳", text: "他對別人的工作一無所知，卻總喜歡在旁邊___________。" },
+    { word: "默不作聲", text: "面對老師的詢問，做錯事的他低著頭___________。" },
+    { word: "莫名其妙", text: "這件衣服剛才還在這裡，怎麼一下子就不見了？真令人___________。" },
+    { word: "瞠目結舌", text: "魔術師精彩絕倫的表演，讓全場觀眾看得___________。" },
+    { word: "頓時", text: "上課鐘聲一響，原本熱鬧的走廊___________變得鴉雀無聲。" },
+    { word: "毫不領情", text: "我好心幫他收拾書包，他不但沒有道謝，反而___________地把書包抽走。" },
+    { word: "包容", text: "人與人相處難免會有摩擦，我們應該學會互相尊重與___________。" }
+  ];
+
+  // 卡通高飽和度配色
+  const balloonColors = ['#ff6b6b', '#feca57', '#ff9ff3', '#48dbfb', '#1dd1a1', '#54a0ff', '#5f27cd'];
+
+  let scoreP1 = 0;
+  let scoreP2 = 0;
+  let currentQuestions = [];
+  let currentQuestionIndex = 0;
+  let timeRemaining = 300;
+  let timerInterval = null;
+  let animationFrameId = null;
+
+  let balloons = [];
+  let arrows = [];
+
+  // P1 & P2 弓箭角度與觸控狀態
+  let angleP1 = 0.8;  
+  let angleP2 = -0.8; 
+  const touchState = {};
+
+  const gameArea = document.getElementById('game-area');
+  const bowP1 = document.getElementById('bow-p1');
+  const bowP2 = document.getElementById('bow-p2');
+  const scoreP1El = document.getElementById('score-p1');
+  const scoreP2El = document.getElementById('score-p2');
+  const timerEl = document.getElementById('timer');
+  const questionTextEl = document.getElementById('question-text');
+  const startModal = document.getElementById('start-modal');
+  const endModal = document.getElementById('end-modal');
+
+  // 綁定電子白板觸控/點擊按鈕事件
+  function bindTouchEvents(elementId, stateKey) {
+    const btn = document.getElementById(elementId);
+    
+    const startHandler = (e) => {
+      e.preventDefault();
+      touchState[stateKey] = true;
+    };
+    const endHandler = (e) => {
+      e.preventDefault();
+      touchState[stateKey] = false;
+    };
+
+    btn.addEventListener('touchstart', startHandler);
+    btn.addEventListener('touchend', endHandler);
+    btn.addEventListener('mousedown', startHandler);
+    btn.addEventListener('mouseup', endHandler);
+    btn.addEventListener('mouseleave', endHandler);
+  }
+
+  // 設定點擊即時發射按鈕
+  function bindFireEvent(elementId, player) {
+    const btn = document.getElementById(elementId);
+    const fireHandler = (e) => {
+      e.preventDefault();
+      if (startModal.classList.contains('hidden') && endModal.classList.contains('hidden')) {
+        shootArrow(player);
+      }
+    };
+    btn.addEventListener('touchstart', fireHandler);
+    btn.addEventListener('mousedown', fireHandler);
+  }
+
+  // 綁定所有電子白板控制按鈕
+  bindTouchEvents('btn-p1-up', 'p1Up');
+  bindTouchEvents('btn-p1-down', 'p1Down');
+  bindFireEvent('btn-p1-fire', 'p1');
+
+  bindTouchEvents('btn-p2-up', 'p2Up');
+  bindTouchEvents('btn-p2-down', 'p2Down');
+  bindFireEvent('btn-p2-fire', 'p2');
+
+  // 更新弓箭角度（每幀根據按壓狀態旋轉）
+  function updateBowAngles() {
+    // P1 (左)
+    if (touchState['p1Up']) angleP1 = Math.max(0.1, angleP1 - 0.03);
+    if (touchState['p1Down']) angleP1 = Math.min(1.4, angleP1 + 0.03);
+    bowP1.style.transform = `rotate(${angleP1}rad)`;
+
+    // P2 (右)
+    if (touchState['p2Up']) angleP2 = Math.min(-0.1, angleP2 + 0.03);
+    if (touchState['p2Down']) angleP2 = Math.max(-1.4, angleP2 - 0.03);
+    bowP2.style.transform = `rotate(${angleP2}rad)`;
+  }
+
+  function shootArrow(player) {
+    const rect = gameArea.getBoundingClientRect();
+    let startX, startY, angle, arrowClass;
+
+    if (player === 'p1') {
+      startX = 150;
+      startY = rect.height - 70;
+      angle = angleP1;
+      arrowClass = 'arrow-p1';
+    } else {
+      startX = rect.width - 150;
+      startY = rect.height - 70;
+      angle = angleP2;
+      arrowClass = 'arrow-p2';
+    }
+
+    const speed = 14;
+    const vx = Math.sin(angle) * speed;
+    const vy = -Math.cos(angle) * speed;
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = `arrow ${arrowClass}`;
+    arrowEl.style.left = startX + 'px';
+    arrowEl.style.top = startY + 'px';
+    arrowEl.style.transform = `rotate(${angle}rad)`;
+    gameArea.appendChild(arrowEl);
+
+    arrows.push({ el: arrowEl, x: startX, y: startY, vx, vy, player });
+  }
+
+  function startGame() {
+    scoreP1 = 0;
+    scoreP2 = 0;
+    timeRemaining = 300;
+    scoreP1El.textContent = '0';
+    scoreP2El.textContent = '0';
+    
+    currentQuestions = [...wordData].sort(() => Math.random() - 0.5);
+    currentQuestionIndex = 0;
+
+    startModal.classList.add('hidden');
+    endModal.classList.add('hidden');
+    
+    startTimer();
+    loadQuestion();
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeRemaining--;
+      let mins = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+      let secs = (timeRemaining % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${mins}:${secs}`;
+
+      if (timeRemaining <= 0) {
+        checkWinner(true);
+      }
+    }, 1000);
+  }
+
+  function loadQuestion() {
+    if (scoreP1 >= 7 || scoreP2 >= 7) {
+      checkWinner(false);
+      return;
+    }
+
+    if (currentQuestionIndex >= currentQuestions.length) {
+      currentQuestions = [...wordData].sort(() => Math.random() - 0.5);
+      currentQuestionIndex = 0;
+    }
+
+    let q = currentQuestions[currentQuestionIndex];
+    let qText = q.text.replace("___________", "<span class='blank'>？</span>");
+    questionTextEl.innerHTML = qText;
+
+    initBalloons();
+  }
+
+  function initBalloons() {
+    balloons.forEach(b => b.el.remove());
+    arrows.forEach(a => a.el.remove());
+    balloons = [];
+    arrows = [];
+
+    const areaWidth = gameArea.clientWidth - 260; // 避開左右觸控按鈕區域
+    const areaHeight = gameArea.clientHeight - 200;
+
+    wordData.forEach((data, index) => {
+      const el = document.createElement('div');
+      el.className = 'balloon';
+      el.textContent = data.word;
+      
+      const color = balloonColors[index % balloonColors.length];
+      el.style.backgroundColor = color;
+
+      let x = Math.random() * areaWidth + 130;
+      let y = Math.random() * areaHeight + 20;
+      let dx = (Math.random() - 0.5) * 1.8;
+      let dy = (Math.random() - 0.5) * 1.8;
+
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+
+      gameArea.appendChild(el);
+      balloons.push({ el, x, y, dx, dy, word: data.word, color });
+    });
+
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animateGame();
+  }
+
+  function animateGame() {
+    updateBowAngles();
+
+    const areaWidth = gameArea.clientWidth - 110;
+    const areaHeight = gameArea.clientHeight - 180;
+
+    // 移動氣球
+    balloons.forEach(b => {
+      b.x += b.dx;
+      b.y += b.dy;
+
+      if (b.x <= 110 || b.x >= areaWidth) b.dx *= -1;
+      if (b.y <= 10 || b.y >= areaHeight) b.dy *= -1;
+
+      b.el.style.left = b.x + 'px';
+      b.el.style.top = b.y + 'px';
+    });
+
+    // 移動箭矢與碰撞檢測
+    for (let i = arrows.length - 1; i >= 0; i--) {
+      let a = arrows[i];
+      a.x += a.vx;
+      a.y += a.vy;
+      a.el.style.left = a.x + 'px';
+      a.el.style.top = a.y + 'px';
+
+      if (a.x < 0 || a.x > gameArea.clientWidth || a.y < 0 || a.y > gameArea.clientHeight) {
+        a.el.remove();
+        arrows.splice(i, 1);
+        continue;
+      }
+
+      for (let j = balloons.length - 1; j >= 0; j--) {
+        let b = balloons[j];
+        if (checkCollision(a, b)) {
+          handleHit(b, a);
+          a.el.remove();
+          arrows.splice(i, 1);
+          break;
+        }
+      }
+    }
+
+    animationFrameId = requestAnimationFrame(animateGame);
+  }
+
+  function checkCollision(arrow, balloon) {
+    return (
+      arrow.x >= balloon.x &&
+      arrow.x <= balloon.x + 90 &&
+      arrow.y >= balloon.y &&
+      arrow.y <= balloon.y + 110
+    );
+  }
+
+  function createPopEffect(x, y, color) {
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'pop-particle';
+      p.style.backgroundColor = color;
+      p.style.left = (x + 45) + 'px';
+      p.style.top = (y + 55) + 'px';
+
+      const angle = (Math.PI * 2 / 14) * i;
+      const dist = 40 + Math.random() * 35;
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+
+      gameArea.appendChild(p);
+      setTimeout(() => p.remove(), 500);
+    }
+  }
+
+  function handleHit(balloon, arrow) {
+    const correctAnswer = currentQuestions[currentQuestionIndex].word;
+
+    createPopEffect(balloon.x, balloon.y, balloon.color);
+
+    if (balloon.word === correctAnswer) {
+      balloon.el.remove();
+      
+      if (arrow.player === 'p1') {
+        scoreP1++;
+        scoreP1El.textContent = scoreP1;
+      } else {
+        scoreP2++;
+        scoreP2El.textContent = scoreP2;
+      }
+
+      if (scoreP1 >= 7 || scoreP2 >= 7) {
+        checkWinner(false);
+      } else {
+        currentQuestionIndex++;
+        setTimeout(loadQuestion, 400);
+      }
+    } else {
+      balloon.el.remove();
+      balloons = balloons.filter(b => b !== balloon);
+    }
+  }
+
+  function checkWinner(timeOut) {
+    clearInterval(timerInterval);
+    cancelAnimationFrame(animationFrameId);
+
+    let title = "🎉 勝利登場！";
+    let msg = "";
+
+    if (scoreP1 > scoreP2) {
+      msg = `🏆 恭喜 <span style="color:#ff4757; font-weight:bold;">🔴 紅隊 (左側)</span> 贏得勝利！<br>最終比分：${scoreP1} - ${scoreP2}`;
+    } else if (scoreP2 > scoreP1) {
+      msg = `🏆 恭喜 <span style="color:#1e90ff; font-weight:bold;">🔵 藍隊 (右側)</span> 贏得勝利！<br>最終比分：${scoreP2} - ${scoreP1}`;
+    } else {
+      msg = `🤝 勢均力敵！雙方平手！<br>最終比分：${scoreP1} - ${scoreP2}`;
+    }
+
+    if (timeOut) title = "⏱️ 時間到！";
+
+    document.getElementById('end-title').textContent = title;
+    document.getElementById('end-message').innerHTML = msg;
+    endModal.classList.remove('hidden');
+  }
+</script>
+
+</body>
+</html>
